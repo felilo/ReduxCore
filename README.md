@@ -76,7 +76,7 @@ ceremony, that's the gap ReduxCore fills.
 Add via **File → Add Package Dependencies** in Xcode, or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/felilo/ReduxCore", from: "1.0.0")
+.package(url: "https://github.com/felilo/ReduxCore", from: "1.1.0")
 ```
 
 Then import:
