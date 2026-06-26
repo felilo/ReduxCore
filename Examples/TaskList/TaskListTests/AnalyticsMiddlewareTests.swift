@@ -46,7 +46,7 @@ struct AnalyticsMiddlewareTests {
         let tracker = MockAnalyticsTracker()
         let middleware = AnalyticsMiddleware(tracker: tracker)
 
-        await middleware.process(action: .appeared, state: TaskState(), next: { _ in })
+        await middleware.process(action: .appeared, state: TaskState(), dispatch: { _ in })
 
         #expect(tracker.recorded.first?.event == "task_list_viewed")
     }
@@ -55,7 +55,7 @@ struct AnalyticsMiddlewareTests {
         let tracker = MockAnalyticsTracker()
         let middleware = AnalyticsMiddleware(tracker: tracker)
 
-        await middleware.process(action: .createTapped(title: "Buy milk"), state: TaskState(), next: { _ in })
+        await middleware.process(action: .createTapped(title: "Buy milk"), state: TaskState(), dispatch: { _ in })
 
         #expect(tracker.recorded.first?.event == "task_create_tapped")
         #expect(tracker.recorded.first?.properties["title_length"] == "8")
@@ -66,7 +66,7 @@ struct AnalyticsMiddlewareTests {
         let middleware = AnalyticsMiddleware(tracker: tracker)
         let task = TaskItem(id: UUID(), title: "x", isDone: false)
 
-        await middleware.process(action: .taskCreated(task), state: TaskState(), next: { _ in })
+        await middleware.process(action: .taskCreated(task), state: TaskState(), dispatch: { _ in })
 
         #expect(tracker.recorded.first?.event == "task_created")
     }
@@ -75,7 +75,7 @@ struct AnalyticsMiddlewareTests {
         let tracker = MockAnalyticsTracker()
         let middleware = AnalyticsMiddleware(tracker: tracker)
 
-        await middleware.process(action: .deleteTapped(id: UUID()), state: TaskState(), next: { _ in })
+        await middleware.process(action: .deleteTapped(id: UUID()), state: TaskState(), dispatch: { _ in })
 
         #expect(tracker.recorded.first?.event == "task_delete_tapped")
     }
@@ -84,7 +84,7 @@ struct AnalyticsMiddlewareTests {
         let tracker = MockAnalyticsTracker()
         let middleware = AnalyticsMiddleware(tracker: tracker)
 
-        await middleware.process(action: .failed("Network error"), state: TaskState(), next: { _ in })
+        await middleware.process(action: .failed("Network error"), state: TaskState(), dispatch: { _ in })
 
         #expect(tracker.recorded.first?.event == "task_error")
         #expect(tracker.recorded.first?.properties["message"] == "Network error")
@@ -94,7 +94,7 @@ struct AnalyticsMiddlewareTests {
         let tracker = MockAnalyticsTracker()
         let middleware = AnalyticsMiddleware(tracker: tracker)
 
-        await middleware.process(action: .resetNavigation, state: TaskState(), next: { _ in })
+        await middleware.process(action: .resetNavigation, state: TaskState(), dispatch: { _ in })
 
         #expect(tracker.recorded.isEmpty)
     }
@@ -104,9 +104,9 @@ struct AnalyticsMiddlewareTests {
         let middleware = AnalyticsMiddleware(tracker: tracker)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .appeared, state: TaskState(), next: next)
+        await middleware.process(action: .appeared, state: TaskState(), dispatch: dispatch)
 
         #expect(dispatched.isEmpty)
     }

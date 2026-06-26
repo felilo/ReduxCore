@@ -1,4 +1,54 @@
-# Advanced Middleware
+# Middleware
+
+## Execution model
+
+`process` is called **after** the reducer has already applied the action to state — `state` always reflects the updated value. All registered middleware run **concurrently** via `withTaskGroup`; there is no sequential chain.
+
+Calling `dispatch` schedules a brand-new action through the full Redux cycle (reducer → all middleware). It does not pass control to another middleware. Calling `dispatch` with the same action that triggered `process` is a no-op — it is silently filtered to prevent trivial loops.
+
+```
+Action → Reducer (sync) → new state → all middleware in parallel (async)
+                                        ↓ each may call dispatch(newAction)
+                                        Action → Reducer → ...
+```
+
+---
+
+## Writing a middleware
+
+Conform to `MiddlewareType` as a `struct`. Use the `DispatchClosure<Action>` typealias for the parameter type.
+
+```swift
+struct SearchMiddleware: MiddlewareType, Sendable {
+    let api: APIClient
+
+    func process(
+        action: SearchAction,
+        state: SearchState,
+        dispatch: @escaping DispatchClosure<SearchAction>
+    ) async {
+        guard case .queryChanged(let query) = action else { return }
+        let results = (try? await api.search(query)) ?? []
+        await dispatch(.resultsLoaded(results))
+    }
+}
+```
+
+Use `struct` (not `class`) — all stored properties are `Sendable`, so the compiler verifies thread safety automatically without needing `@unchecked Sendable`.
+
+If your middleware never dispatches a follow-up action (e.g. analytics, logging), simply omit the `dispatch` call:
+
+```swift
+struct LoggerMiddleware<Action: Actionable, State: Statable>: MiddlewareType, Sendable {
+    func process(action: Action, state: State, dispatch: @escaping DispatchClosure<Action>) async {
+#if DEBUG
+        print("[Store] ▶ \(action)")
+#endif
+    }
+}
+```
+
+---
 
 ## Debouncing with `CancellableTask`
 
@@ -14,7 +64,7 @@ struct SearchMiddleware: MiddlewareType, CancellableTask, Sendable {
     func process(
         action: SearchAction,
         state: SearchState,
-        next: @escaping @concurrent @Sendable (SearchAction) async -> Void
+        dispatch: @escaping DispatchClosure<SearchAction>
     ) async {
         guard case .queryChanged(let query) = action else { return }
 
@@ -28,7 +78,7 @@ struct SearchMiddleware: MiddlewareType, CancellableTask, Sendable {
             }
 
             let results = (try? await self.api.search(query)) ?? []
-            await next(.resultsLoaded(results))
+            await dispatch(.resultsLoaded(results))
         }
     }
 }
@@ -95,14 +145,19 @@ The store ships two built-in cycle detectors. Both are diagnostic-only — they 
 [ReduxCore] ⚠️ Possible async cycle: 'queryChanged("abc")' dispatched 21 times in < 1.0 seconds
 ```
 
-Adjust the threshold if your feature legitimately dispatches an action frequently:
+Adjust the threshold if your feature legitimately dispatches an action frequently. Pass the argument directly to `StoreContainerView`, or via the `@StoreView` macro:
 
 ```swift
+// Direct usage
 StoreContainerView(
     reducer: SearchReducer(),
     maxActionFrequency: 100,
     cycleWindow: .seconds(2)
 ) { ... } content: { store in ... }
+
+// Via macro
+@StoreView(reducer: SearchReducer.self, maxActionFrequency: 100, cycleWindow: .seconds(2))
+struct SearchScreen: View { ... }
 ```
 
 Set `maxActionFrequency: 0` to disable async cycle detection entirely.
@@ -112,10 +167,15 @@ Set `maxActionFrequency: 0` to disable async cycle detection entirely.
 `maxDispatchDepth` limits how deeply one dispatch may synchronously trigger another. The default is `.max` (unlimited). Lower it during debugging to break infinite re-entrant chains:
 
 ```swift
+// Direct usage
 StoreContainerView(
     reducer: SearchReducer(),
     maxDispatchDepth: 10
 ) { ... } content: { store in ... }
+
+// Via macro
+@StoreView(reducer: SearchReducer.self, maxDispatchDepth: 10)
+struct SearchScreen: View { ... }
 ```
 
 When the limit is hit:

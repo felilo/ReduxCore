@@ -34,9 +34,9 @@ struct LoggerMiddlewareTests {
         let middleware = LoggerMiddleware<TaskAction, TaskState>()
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .appeared, state: TaskState(), next: next)
+        await middleware.process(action: .appeared, state: TaskState(), dispatch: dispatch)
 
         #expect(dispatched.isEmpty)
     }
@@ -57,7 +57,7 @@ struct LoggerMiddlewareTests {
         ]
 
         for action in actions {
-            await middleware.process(action: action, state: TaskState(), next: { _ in })
+            await middleware.process(action: action, state: TaskState(), dispatch: { _ in })
         }
     }
 }

@@ -36,14 +36,14 @@ struct TaskDetailAnalyticsMiddleware: MiddlewareType, Sendable {
     func process(
         action: TaskDetailAction,
         state: TaskDetailState,
-        next: @escaping @concurrent @Sendable (TaskDetailAction) async -> Void
+        dispatch: @escaping DispatchClosure<TaskDetailAction>
     ) async {
         switch action {
         case .appeared:
             await tracker.track("task_detail_viewed")
         case .toggleDoneTapped:
-            let newValue = !(state.task?.isDone ?? false)
-            await tracker.track("task_toggle_tapped", properties: ["is_done": "\(newValue)"])
+            let isDoneNow = state.task?.isDone ?? false
+            await tracker.track("task_toggle_tapped", properties: ["is_done": "\(isDoneNow)"])
         case .failed:
             break
         }
