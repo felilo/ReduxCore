@@ -40,9 +40,9 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .appeared, state: TaskState(), next: next)
+        await middleware.process(action: .appeared, state: TaskState(), dispatch: dispatch)
 
         #expect(api.fetchCallCount == 1)
         guard case .tasksLoaded(let tasks) = dispatched.first else {
@@ -58,9 +58,9 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .appeared, state: TaskState(), next: next)
+        await middleware.process(action: .appeared, state: TaskState(), dispatch: dispatch)
 
         guard case .failed = dispatched.first else {
             Issue.record("Expected .failed, got \(dispatched)")
@@ -76,7 +76,7 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
         await middleware.process(
             action: .createTapped(title: "Buy milk"),
@@ -99,7 +99,7 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
         await middleware.process(
             action: .createTapped(title: "Fail"),
@@ -121,9 +121,9 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .deleteTapped(id: id), state: TaskState(), next: next)
+        await middleware.process(action: .deleteTapped(id: id), state: TaskState(), dispatch: dispatch)
 
         #expect(api.deleteCallCount == 1)
         #expect(api.deleteReceivedIDs == [id])
@@ -140,9 +140,9 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .deleteTapped(id: UUID()), state: TaskState(), next: next)
+        await middleware.process(action: .deleteTapped(id: UUID()), state: TaskState(), dispatch: dispatch)
 
         guard case .failed = dispatched.first else {
             Issue.record("Expected .failed, got \(dispatched)")
@@ -158,9 +158,9 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .searchChanged("milk"), state: TaskState(), next: next)
+        await middleware.process(action: .searchChanged("milk"), state: TaskState(), dispatch: dispatch)
         try await Task.sleep(for: .milliseconds(400))
 
         #expect(api.fetchCallCount == 1)
@@ -176,10 +176,10 @@ struct TaskMiddlewareTests {
         api.stubbedTasks = []
         let middleware = TaskMiddleware(api: api)
 
-        let next: @Sendable (TaskAction) async -> Void = { _ in }
+        let dispatch: @Sendable (TaskAction) async -> Void = { _ in }
 
-        await middleware.process(action: .searchChanged("m"), state: TaskState(), next: next)
-        await middleware.process(action: .searchChanged("mi"), state: TaskState(), next: next)
+        await middleware.process(action: .searchChanged("m"), state: TaskState(), dispatch: dispatch)
+        await middleware.process(action: .searchChanged("mi"), state: TaskState(), dispatch: dispatch)
         try await Task.sleep(for: .milliseconds(400))
 
         #expect(api.fetchCallCount == 1)
@@ -191,9 +191,9 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .searchChanged("milk"), state: TaskState(), next: next)
+        await middleware.process(action: .searchChanged("milk"), state: TaskState(), dispatch: dispatch)
         try await Task.sleep(for: .milliseconds(400))
 
         guard case .failed = dispatched.first else {
@@ -209,9 +209,9 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .resetNavigation, state: TaskState(), next: next)
+        await middleware.process(action: .resetNavigation, state: TaskState(), dispatch: dispatch)
 
         #expect(dispatched.isEmpty)
         #expect(api.fetchCallCount == 0)
@@ -224,7 +224,7 @@ struct TaskMiddlewareTests {
         let middleware = TaskMiddleware(api: api)
 
         var dispatched: [TaskAction] = []
-        let next: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskAction) async -> Void = { @MainActor in dispatched.append($0) }
 
         let unhandled: [TaskAction] = [
             .tasksLoaded([]),
@@ -237,7 +237,7 @@ struct TaskMiddlewareTests {
         ]
 
         for action in unhandled {
-            await middleware.process(action: action, state: TaskState(), next: next)
+            await middleware.process(action: action, state: TaskState(), dispatch: dispatch)
         }
 
         #expect(dispatched.isEmpty)

@@ -34,11 +34,11 @@ struct TaskMiddleware: MiddlewareType, Sendable {
         self.api = api
     }
 
-    func process(action: TaskAction, state: TaskState, next: @escaping @concurrent @Sendable (TaskAction) async -> Void) async {
+    func process(action: TaskAction, state: TaskState, dispatch: @escaping @concurrent @Sendable (TaskAction) async -> Void) async {
         switch action {
 
         case .appeared:
-            await fetchTasks(next: next)
+            await fetchTasks(dispatch: dispatch)
         case .searchChanged:
             await taskManager.run(key: "search") {
                 do {
@@ -46,24 +46,24 @@ struct TaskMiddleware: MiddlewareType, Sendable {
                 } catch {
                     return
                 }
-                
-                await self.fetchTasks(next: next)
+
+                await self.fetchTasks(dispatch: dispatch)
             }
 
         case .createTapped(let title):
             do {
                 let task = try await api.createTask(title: title)
-                await next(.taskCreated(task))
+                await dispatch(.taskCreated(task))
             } catch {
-                await next(.failed(error.localizedDescription))
+                await dispatch(.failed(error.localizedDescription))
             }
 
         case .deleteTapped(let id):
             do {
                 try await api.deleteTask(id: id)
-                await next(.taskDeleted(id))
+                await dispatch(.taskDeleted(id))
             } catch {
-                await next(.failed(error.localizedDescription))
+                await dispatch(.failed(error.localizedDescription))
             }
 
         default:
@@ -71,13 +71,13 @@ struct TaskMiddleware: MiddlewareType, Sendable {
         }
     }
 
-    private func fetchTasks(next: @escaping @Sendable (TaskAction) async -> Void) async {
+    private func fetchTasks(dispatch: @escaping @Sendable (TaskAction) async -> Void) async {
         do {
             let tasks = try await api.fetchTasks()
-            await next(.tasksLoaded(tasks))
+            await dispatch(.tasksLoaded(tasks))
         } catch {
             guard !(error is CancellationError) else { return }
-            await next(.failed(error.localizedDescription))
+            await dispatch(.failed(error.localizedDescription))
         }
     }
 }

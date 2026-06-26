@@ -30,7 +30,7 @@ struct LoggerMiddleware<Action: Actionable, State: Statable>: MiddlewareType, Se
     func process(
         action: Action,
         state: State,
-        next: @escaping @concurrent @Sendable (Action) async -> Void
+        dispatch: @escaping @concurrent @Sendable (Action) async -> Void
     ) async {
 #if DEBUG
         print("[Store] ▶ \(action)")

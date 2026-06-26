@@ -36,7 +36,7 @@ struct TaskDetailMiddleware: MiddlewareType, Sendable {
     func process(
         action: TaskDetailAction,
         state: TaskDetailState,
-        next: @escaping @concurrent @Sendable (TaskDetailAction) async -> Void
+        dispatch: @escaping @concurrent @Sendable (TaskDetailAction) async -> Void
     ) async {
         switch action {
         case .appeared:
@@ -46,7 +46,7 @@ struct TaskDetailMiddleware: MiddlewareType, Sendable {
             do {
                 try await api.toggleTask(id: id)
             } catch {
-                await next(.failed(error.localizedDescription))
+                await dispatch(.failed(error.localizedDescription))
             }
         case .failed:
             break

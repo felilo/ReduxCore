@@ -44,7 +44,7 @@ struct TaskDetailAnalyticsMiddlewareTests {
         let tracker = MockAnalyticsTracker()
         let middleware = TaskDetailAnalyticsMiddleware(tracker: tracker)
 
-        await middleware.process(action: .appeared(stubTask), state: TaskDetailState(), next: { _ in })
+        await middleware.process(action: .appeared(stubTask), state: TaskDetailState(), dispatch: { _ in })
 
         #expect(tracker.recorded.first?.event == "task_detail_viewed")
     }
@@ -52,9 +52,11 @@ struct TaskDetailAnalyticsMiddlewareTests {
     @Test func toggleDoneTappedTracksWithIsDoneFalseToTrue() async {
         let tracker = MockAnalyticsTracker()
         let middleware = TaskDetailAnalyticsMiddleware(tracker: tracker)
-        let state = TaskDetailState(task: stubTask)   // isDone = false → toggling to true
+        // Post-reducer state: isDone was false, reducer toggled it to true
+        let doneTask = TaskItem(id: stubTask.id, title: stubTask.title, isDone: true)
+        let state = TaskDetailState(task: doneTask)
 
-        await middleware.process(action: .toggleDoneTapped, state: state, next: { _ in })
+        await middleware.process(action: .toggleDoneTapped, state: state, dispatch: { _ in })
 
         #expect(tracker.recorded.first?.event == "task_toggle_tapped")
         #expect(tracker.recorded.first?.properties["is_done"] == "true")
@@ -63,10 +65,10 @@ struct TaskDetailAnalyticsMiddlewareTests {
     @Test func toggleDoneTappedTracksWithIsDoneTrueToFalse() async {
         let tracker = MockAnalyticsTracker()
         let middleware = TaskDetailAnalyticsMiddleware(tracker: tracker)
-        let doneTask = TaskItem(id: stubTask.id, title: stubTask.title, isDone: true)
-        let state = TaskDetailState(task: doneTask)   // isDone = true → toggling to false
+        // Post-reducer state: isDone was true, reducer toggled it to false
+        let state = TaskDetailState(task: stubTask)   // isDone = false (post-reducer)
 
-        await middleware.process(action: .toggleDoneTapped, state: state, next: { _ in })
+        await middleware.process(action: .toggleDoneTapped, state: state, dispatch: { _ in })
 
         #expect(tracker.recorded.first?.event == "task_toggle_tapped")
         #expect(tracker.recorded.first?.properties["is_done"] == "false")
@@ -77,12 +79,13 @@ struct TaskDetailAnalyticsMiddlewareTests {
         let middleware = TaskDetailAnalyticsMiddleware(tracker: tracker)
 
         var dispatched: [TaskDetailAction] = []
-        let next: @Sendable (TaskDetailAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskDetailAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .appeared(stubTask), state: TaskDetailState(), next: next)
+        await middleware.process(action: .appeared(stubTask), state: TaskDetailState(), dispatch: dispatch)
 
         #expect(dispatched.isEmpty)
     }
+
 }
 
 @MainActor
@@ -94,7 +97,7 @@ struct TaskDetailMiddlewareTests {
         let middleware = TaskDetailMiddleware(api: api)
         let state = TaskDetailState(task: stubTask)
 
-        await middleware.process(action: .toggleDoneTapped, state: state, next: { _ in })
+        await middleware.process(action: .toggleDoneTapped, state: state, dispatch: { _ in })
 
         #expect(api.toggleCallCount == 1)
         #expect(api.toggleReceivedIDs == [stubTask.id])
@@ -107,9 +110,9 @@ struct TaskDetailMiddlewareTests {
         let state = TaskDetailState(task: stubTask)
 
         var dispatched: [TaskDetailAction] = []
-        let next: @Sendable (TaskDetailAction) async -> Void = { @MainActor in dispatched.append($0) }
+        let dispatch: @Sendable (TaskDetailAction) async -> Void = { @MainActor in dispatched.append($0) }
 
-        await middleware.process(action: .toggleDoneTapped, state: state, next: next)
+        await middleware.process(action: .toggleDoneTapped, state: state, dispatch: dispatch)
 
         guard case .failed = dispatched.first else {
             Issue.record("Expected .failed, got \(dispatched)")
@@ -121,7 +124,7 @@ struct TaskDetailMiddlewareTests {
         let api = MockTaskAPIClient()
         let middleware = TaskDetailMiddleware(api: api)
 
-        await middleware.process(action: .toggleDoneTapped, state: TaskDetailState(), next: { _ in })
+        await middleware.process(action: .toggleDoneTapped, state: TaskDetailState(), dispatch: { _ in })
 
         #expect(api.toggleCallCount == 0)
     }
