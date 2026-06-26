@@ -34,7 +34,7 @@ struct TaskMiddleware: MiddlewareType, Sendable {
         self.api = api
     }
 
-    func process(action: TaskAction, state: TaskState, dispatch: @escaping @concurrent @Sendable (TaskAction) async -> Void) async {
+    func process(action: TaskAction, state: TaskState, dispatch: @escaping DispatchClosure<TaskAction>) async {
         switch action {
 
         case .appeared:
@@ -71,7 +71,7 @@ struct TaskMiddleware: MiddlewareType, Sendable {
         }
     }
 
-    private func fetchTasks(dispatch: @escaping @Sendable (TaskAction) async -> Void) async {
+    private func fetchTasks(dispatch: @escaping DispatchClosure<TaskAction>) async {
         do {
             let tasks = try await api.fetchTasks()
             await dispatch(.tasksLoaded(tasks))

@@ -37,7 +37,7 @@ struct AnalyticsMiddleware: MiddlewareType, Sendable {
     func process(
         action: TaskAction,
         state: TaskState,
-        dispatch: @escaping @concurrent @Sendable (TaskAction) async -> Void
+        dispatch: @escaping DispatchClosure<TaskAction>
     ) async {
         switch action {
         case .appeared:

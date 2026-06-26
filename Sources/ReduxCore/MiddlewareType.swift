@@ -39,11 +39,13 @@
 public protocol MiddlewareType<Action, State>: Sendable {
     associatedtype Action
     associatedtype State
+    
+    typealias DispatchClosure<T> = @Sendable (T) async -> Void
 
     func process(
         action: Action,
         state: State,
-        dispatch: @escaping @Sendable (Action) async -> Void
+        dispatch: @escaping DispatchClosure<Action>
     ) async
 }
 

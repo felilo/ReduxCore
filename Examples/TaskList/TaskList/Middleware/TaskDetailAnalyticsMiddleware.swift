@@ -36,7 +36,7 @@ struct TaskDetailAnalyticsMiddleware: MiddlewareType, Sendable {
     func process(
         action: TaskDetailAction,
         state: TaskDetailState,
-        dispatch: @escaping @concurrent @Sendable (TaskDetailAction) async -> Void
+        dispatch: @escaping DispatchClosure<TaskDetailAction>
     ) async {
         switch action {
         case .appeared:
