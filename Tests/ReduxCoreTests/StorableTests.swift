@@ -604,6 +604,31 @@ struct StorableTests {
         #expect(m2.didProcess)
     }
 
+    @Test("two concurrent dispatchAsync calls serialize reducers and run middleware in parallel")
+    func dispatchAsyncConcurrentCallsSerializeReducers() async {
+        let spy1 = SpyMiddleware()
+        let spy2 = SpyMiddleware()
+        let store = Storable(
+            reducer: TestReducer(),
+            middleware: [AnyMiddleware(spy1), AnyMiddleware(spy2)]
+        )
+
+        // Fire two dispatchAsync calls concurrently from separate Tasks.
+        // Reducers must serialize (MainActor), middleware must all complete
+        // before each call returns, and state must reflect both dispatches.
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { @MainActor in await store.dispatchAsync(.increment) }
+            group.addTask { @MainActor in await store.dispatchAsync(.increment) }
+        }
+
+        // Both reducers ran → count == 2
+        #expect(store.state.count == 2)
+
+        // Both middleware instances saw both actions (2 dispatches × 2 middleware = 4 calls total)
+        #expect(spy1.receivedActions.count == 2)
+        #expect(spy2.receivedActions.count == 2)
+    }
+
     @Test("cancel() stops a dispatchAsync task in flight")
     func dispatchAsyncCancelledByExplicitCancel() async throws {
         let slow = AsyncMiddleware(delay: .milliseconds(500), nextAction: .setValue(99))
